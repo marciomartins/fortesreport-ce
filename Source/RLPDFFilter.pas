@@ -1,17 +1,73 @@
-{@unit RLPDFFilter - Implementação do filtro para criação de arquivos PDF. }
-unit RLPDFFilter;
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
 
 {$I RLReport.inc}
+
+{@unit RLPDFFilter - Implementação do filtro para criação de arquivos PDF. }
+unit RLPDFFilter;
 
 interface
 
 uses
-  SysUtils, Classes, Math, {$if CompilerVersion >= 29}Vcl.Imaging.jpeg{$else}Jpeg{$ifend},
-{$ifdef VCL}
-  Windows, Graphics, RLMetaVCL, 
-{$else}
-  Types, QGraphics, RLMetaCLX,
-{$endif}
+  {$IfDef MSWINDOWS}
+   {$IfNDef FPC}
+    Windows,
+   {$EndIf}
+  {$EndIf}
+  SysUtils, Classes, Math,
+  {$IfDef FPC}
+   LCLIntf, LCLType, LConvEncoding,
+  {$Else}
+   {$IfDef DELPHIXE8_UP}Vcl.Imaging.jpeg{$Else}Jpeg{$EndIf},
+  {$EndIf}
+  {$IfDef CLX}
+   QTypes, QGraphics, RLMetaCLX,
+  {$Else}
+   Types, Graphics, RLMetaVCL,
+  {$endif}
   RLMetaFile, RLConsts, RLTypes, RLUtils, RLFilters;
 
 const
@@ -220,7 +276,7 @@ type
       AFontId, AFontSize: Integer);
     function WriteBitmap(ABitmap: TBitmap): Integer;
     procedure WriteBitmapData(ABitmap: TBitmap);
-    function WriteJpeg(AJpeg: TJpegImage): Integer;
+    function WriteJpeg(AJpeg: TJpegImage; InternalDraw: Boolean = False): Integer;
     procedure WriteJpegData(AJpeg: TJpegImage);
 
     function PDF_PointStr(X, Y: Double): string;
@@ -307,24 +363,21 @@ type
 
     procedure Assign(Source: TRLPDFFilterPageSetup); reintroduce;
     procedure Clear;
-  //fpc does not allow to publish records
-  {$ifndef FPC}
-  published
-  {$endif}
-    property ColumnMargin: TRLPDFFilterMarginType read FColumnMargin write FColumnMargin;
-    property ColumnGap: TRLPDFFilterLocationType read FColumnGap write FColumnGap;
+
     property PaperSize: TRLPDFFilterPaperSizeType read FPaperSize write FPaperSize;
     property MediaSize: TRLPDFFilterPaperSizeType read FMediaSize write FMediaSize;
     property Margins: TRLPDFFilterMarginType read FMargins write FMargins;
+    property ColumnMargin: TRLPDFFilterMarginType read FColumnMargin write FColumnMargin;
+    property ColumnGap: TRLPDFFilterLocationType read FColumnGap write FColumnGap;
     property WorkArea: TRLPDFFilterMarginType read FWorkArea write FWorkArea;
   published
+    property LandScape: Boolean read FLandScape write FLandScape;
     property PageBorder: Boolean read FPageBorder write FPageBorder;
     property ColumnBorder: TRLPDFFilterColumnBorderType
       read FColumnBorder write FColumnBorder;
     property BorderDashPattern: TRLPDFFilterDashPatternType
       read FBorderDashPattern write FBorderDashPattern;
     property ColumnCount: Word read FColumnCount write FColumnCount;
-    property LandScape: Boolean read FLandScape write FLandScape;
     property RowCount: Word read FRowCount write FRowCount;
     property FontPointSize: Word read FFontPointSize write FFontPointSize;
     property ColumnFontPointSize: Word read FColumnFontPointSize
@@ -616,12 +669,16 @@ begin
   FPageSetup := TRLPDFFilterPageSetup.Create;
   FTextControl := TRLPDFFilterTextControl.Create;
 
+  {$IfDef FPC}
   FImageFormat := ifJPeg;
+  {$Else}
+  FImageFormat := ifJPeg;
+  {$EndIf}
 
   inherited Create(AOwner);
 
   DefaultExt := '.pdf';
-  DisplayName := LocaleStrings.LS_PDFFormatStr;
+  DisplayName := GetLocalizeStr(LocaleStrings.LS_PDFFormatStr);
 
   FixupPageSetup;
   Reset;
@@ -696,7 +753,7 @@ begin
     Result := TBitmap.Create;
     Result.Width := Src.Width;
     Result.Height := Src.Height;
-    Result.PixelFormat := pf32bit;
+    Result.PixelFormat := pf8bit;
     Result.Canvas.Draw(0, 0, Src);
   end;
 end;
@@ -705,19 +762,29 @@ function JPeg8Of(Src: TGraphic): TJPEGImage;
 var
   bmp: TBitmap;
 begin
-  if (Src is TJPEGImage) and (TJPEGImage(Src).PixelFormat = jf8Bit) then
+  if (Src is TJPEGImage) and (TJPEGImage(Src).PixelFormat = {$IfDef FPC}pf8bit{$Else}jf8Bit{$EndIf}) then
     Result := TJPEGImage(Src)
   else
   begin
+    {$IfDef FPC}
+    Result := TJPEGImage.Create;
+    Result.Width := Src.Width;
+    Result.Height := Src.Height;
+    Result.PixelFormat := pf8bit;
+    Result.Canvas.Draw(0, 0, Src);
+    // FPC always will change "PixelFormat" to pf24bit, when you try to read it...
+    // So I changed WriteJpeg() to receive a Flag as a parameter
+    {$Else}
     bmp := Bitmap32Of(Src);
     try
       Result := TJPEGImage.Create;
-      Result.PixelFormat := jf8Bit;
+      Result.PixelFormat := {$IfDef FPC}pf8bit{$Else}jf8Bit{$EndIf};
       Result.Assign(bmp);
     finally
       if bmp <> Src then
         bmp.Free;
     end;
+    {$EndIf}
   end;
 end;
 
@@ -822,7 +889,7 @@ begin
       ifJPeg:
       begin
         jpg := JPeg8Of(grp);
-        Result := WriteJpeg(jpg);
+        Result := WriteJpeg(jpg, True);
       end;
     else
       raise Exception.Create('Unknown imageformat');
@@ -1282,17 +1349,17 @@ begin
   with FDocumentInfo do
   begin
     if Title <> '' then
-      Writeln('/Title(' + Title + ')');
+      Writeln('/Title(' + GetAnsiStr(Title) + ')');
     if Subject <> '' then
-      Writeln('/Subject(' + Subject + ')');
+      Writeln('/Subject(' + GetAnsiStr(Subject) + ')');
     if Author <> '' then
-      Writeln('/Author(' + Author + ')');
+      Writeln('/Author(' + GetAnsiStr(Author) + ')');
     if Keywords <> '' then
-      Writeln('/Keywords(' + Keywords + ')');
+      Writeln('/Keywords(' + GetAnsiStr(Keywords) + ')');
     if Creator <> '' then
-      Writeln('/Creator(' + Creator + ')');
+      Writeln('/Creator(' + GetAnsiStr(Creator) + ')');
     if Producer <> '' then
-      Writeln('/Producer(' + Producer + ')');
+      Writeln('/Producer(' + GetAnsiStr(Producer) + ')');
   end;
 
   EndObj;
@@ -1762,7 +1829,7 @@ begin
   EndShortObj;
 end;
 
-function TRLPDFFilter.WriteJpeg(AJpeg: TJpegImage): Integer;
+function TRLPDFFilter.WriteJpeg(AJpeg: TJpegImage; InternalDraw: Boolean): Integer;
 var
   begstm: Integer;
   endstm: Integer;
@@ -1780,7 +1847,8 @@ begin
     Writeln('/ColorSpace/DeviceGray')
   else
     Writeln('/ColorSpace/DeviceRGB');
-  if AJpeg.PixelFormat = jf8Bit then
+
+  if InternalDraw or (AJpeg.PixelFormat = {$IfDef FPC}pf8bit{$Else}jf8Bit{$EndIf}) then
     Writeln('/BitsPerComponent 8')
   else
     Writeln('/BitsPerComponent 24');
@@ -2030,7 +2098,12 @@ class function TRLPDFFilter.PDF_EncodeText(const AText: string): string;
 var
   I: Integer;
 begin
+  {$IfDef FPC}
+  Result := GetAnsiStr(AText);
+  {$Else}
   Result := AText;
+  {$EndIf}
+
   for I := Length(Result) downto 1 do
     if CharInSet(Result[I], ['(', ')', '\']) then
     begin

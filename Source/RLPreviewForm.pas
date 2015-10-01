@@ -1,25 +1,71 @@
-{@unit RLPreviewForm - Implementação do form padrão de pré-visualização. }
-unit RLPreviewForm;
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
 
-{$ifdef FPC}
-{$mode delphi}
-{$endif}
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
 
 {$I RLReport.inc}
+
+{@unit RLPreviewForm - Implementação do form padrão de pré-visualização. }
+unit RLPreviewForm;
 
 interface
 
 uses
-  SysUtils, Math, Contnrs, Classes, Messages,
-  {$ifdef FPC}
-  LCLType,
-  {$endif}
-{$ifdef VCL}
-  Windows, Controls, Buttons, ExtCtrls, Forms, Dialogs, StdCtrls, Graphics,
-{$else}
-  Types, QControls, Qt, QButtons, QExtCtrls, QForms, QDialogs, QStdCtrls, QTypes, QGraphics,
-{$endif}
-  RLConsts, RLMetaFile, RLPreview, RLFilters, RLUtils, RLPrintDialog, RLSaveDialog, RLPrinters, RLTypes, RLFindDialog, RLComponentFactory;
+  {$IfDef MSWINDOWS}
+   Windows, Messages,
+  {$EndIf}
+  SysUtils, Math, Contnrs, Classes,
+  {$IfDef FPC}
+   LCLIntf, LCLType, FileUtil,
+  {$EndIf}
+  {$IfDef CLX}
+   QTypes, QControls, QButtons, QExtCtrls, QForms, QDialogs, QStdCtrls, QGraphics, Qt,
+  {$Else}
+   Types, Controls, Buttons, ExtCtrls, Forms, Dialogs, StdCtrls, Graphics,
+  {$EndIf}
+  RLConsts, RLMetaFile, RLPreview, RLFilters, RLUtils, RLPrintDialog,
+  RLSaveDialog, RLPrinters, RLTypes, RLFindDialog, RLComponentFactory;
 
 type
 
@@ -281,7 +327,7 @@ procedure PreviewFromFileDialog;
 
 implementation
 
-{$ifndef FPC}
+{$IfNDef FPC}
 uses VCLCom;
 {$endif}
 
@@ -332,8 +378,12 @@ var
   savecursor: TCursor;
   pages: TRLGraphicStorage;
 begin
+  {$IfDef FPC}
+  if not FileExistsUTF8(AFileName) then
+  {$Else}
   if not FileExists(AFileName) then
-    raise Exception.Create(LocaleStrings.LS_FileNotFoundStr + ' "' + AFileName + '"');
+  {$EndIf}
+    raise Exception.Create(GetLocalizeStr(LocaleStrings.LS_FileNotFoundStr + ' "' + AFileName + '"'));
   //
   pages := TRLGraphicStorage.Create;
   try
@@ -380,7 +430,7 @@ begin
       DefaultExt := FormatFileExt(ReportFileExt);
       Filter := AddFileFilter('', CS_ProductTitleStr, ReportFileExt);
       FilterIndex := 1;
-      Title := LocaleStrings.LS_LoadReportStr;
+      Title := GetLocalizeStr(LocaleStrings.LS_LoadReportStr);
       if Execute then
         PreviewFromFile(FileName);
     finally
@@ -1127,39 +1177,41 @@ begin
     Top := 220;
   end;
   //
-  Caption := LocaleStrings.LS_PreviewStr;
-  SpeedButtonFirst.Hint := LocaleStrings.LS_FirstPageStr;
+  Caption := GetLocalizeStr(LocaleStrings.LS_PreviewStr);
+  SpeedButtonFirst.Hint := GetLocalizeStr(LocaleStrings.LS_FirstPageStr);
   SpeedButtonFirst.ShowHint := True;
-  SpeedButtonPrior.Hint := LocaleStrings.LS_PriorPageStr;
+  SpeedButtonPrior.Hint := GetLocalizeStr(LocaleStrings.LS_PriorPageStr);
   SpeedButtonPrior.ShowHint := True;
-  SpeedButtonNext.Hint := LocaleStrings.LS_NextPageStr;
+  SpeedButtonNext.Hint := GetLocalizeStr(LocaleStrings.LS_NextPageStr);
   SpeedButtonNext.ShowHint := True;
-  SpeedButtonLast.Hint := LocaleStrings.LS_LastPageStr;
+  SpeedButtonLast.Hint := GetLocalizeStr(LocaleStrings.LS_LastPageStr);
   SpeedButtonLast.ShowHint := True;
-  SpeedButtonViews.Hint := LocaleStrings.LS_DivideScreenStr;
+  SpeedButtonViews.Hint := GetLocalizeStr(LocaleStrings.LS_DivideScreenStr);
   SpeedButtonViews.ShowHint := True;
-  SpeedButtonPrint.Hint := LocaleStrings.LS_PrintStr;
+  SpeedButtonPrint.Hint := GetLocalizeStr(LocaleStrings.LS_PrintStr);
   SpeedButtonPrint.ShowHint := True;
-  SpeedButtonPrint.Caption := LocaleStrings.LS_PrintStr;
-  SpeedButtonSave.Hint := LocaleStrings.LS_SaveToFileStr;
+  SpeedButtonPrint.Caption := GetLocalizeStr(LocaleStrings.LS_PrintStr);
+  SpeedButtonSave.Hint := GetLocalizeStr(LocaleStrings.LS_SaveToFileStr);
   SpeedButtonSave.ShowHint := True;
-  SpeedButtonSave.Caption := LocaleStrings.LS_SaveStr;
-  SpeedButtonEdit.Hint := LocaleStrings.LS_EditStr;
+  SpeedButtonSave.Caption := GetLocalizeStr(LocaleStrings.LS_SaveStr);
+  SpeedButtonEdit.Hint := GetLocalizeStr(LocaleStrings.LS_EditStr);
   SpeedButtonEdit.ShowHint := True;
-  SpeedButtonSend.Caption := LocaleStrings.LS_SendStr;
-  SpeedButtonSend.Hint := LocaleStrings.LS_SendToStr;
+  SpeedButtonSend.Caption := GetLocalizeStr(LocaleStrings.LS_SendStr);
+  SpeedButtonSend.Hint := GetLocalizeStr(LocaleStrings.LS_SendToStr);
   SpeedButtonSend.ShowHint := True;
-  LabelPage.Caption := LocaleStrings.LS_PageStr;
-  LabelOf.Caption := LocaleStrings.LS_OfStr;
+  LabelPage.Caption := GetLocalizeStr(LocaleStrings.LS_PageStr);
+  LabelOf.Caption := GetLocalizeStr(LocaleStrings.LS_OfStr);
   PanelPageCount.Caption := '0';
-  SpeedButtonClose.Hint := LocaleStrings.LS_CloseStr;
+  SpeedButtonClose.Hint := GetLocalizeStr(LocaleStrings.LS_CloseStr);
   SpeedButtonClose.ShowHint := True;
-  SpeedButtonClose.Caption := LocaleStrings.LS_CloseStr;
-  SpeedButtonCopyright.Hint := CS_ProductTitleStr + '  ' + CS_Version;
+  SpeedButtonClose.Caption := GetLocalizeStr(LocaleStrings.LS_CloseStr);
+  SpeedButtonCopyright.Hint := GetLocalizeStr(CS_ProductTitleStr + '  ' + CS_Version);
   SpeedButtonCopyright.ShowHint := True;
-  ComboBoxZoom.Items[8] := LocaleStrings.LS_EntireWidthStr;
-  ComboBoxZoom.Items[9] := LocaleStrings.LS_EntirePageStr;
-  ComboBoxZoom.Items[10] := LocaleStrings.LS_MultiplePagesStr;
+  SpeedButtonZoomDown.Hint := GetLocalizeStr(LocaleStrings.LS_ZoomHint);
+  SpeedButtonZoomUp.Hint := GetLocalizeStr(LocaleStrings.LS_ZoomHint);
+  ComboBoxZoom.Items[8] := GetLocalizeStr(LocaleStrings.LS_EntireWidthStr);
+  ComboBoxZoom.Items[9] := GetLocalizeStr(LocaleStrings.LS_EntirePageStr);
+  ComboBoxZoom.Items[10] := GetLocalizeStr(LocaleStrings.LS_MultiplePagesStr);
   //
   if Assigned(SetupInstance) then
   begin
@@ -1317,7 +1369,11 @@ begin
       try
         MaxPage := Preview.Pages.PageCount;
         if Self.Preview.Pages.Title <> '' then
-          FileName := ExpandFileName(FileNameFromText(Self.Preview.Pages.Title))
+        {$IFDEF FPC}
+         FileName := ExpandFileNameUTF8(FileNameFromText(Self.Preview.Pages.Title))
+        {$ELSE}
+         FileName := ExpandFileName(FileNameFromText(Self.Preview.Pages.Title))
+        {$ENDIF}
         else if (SelectedFilter <> nil) and (SelectedFilter is TRLCustomSaveFilter) then
           FileName := TRLCustomSaveFilter(SelectedFilter).FileName
         else
@@ -1527,19 +1583,8 @@ begin
 end;
 
 procedure TRLPreviewForm.SpeedButtonZoomDownClick(Sender: TObject);
-{$ifdef FPC}
-var
-  ZoomFactor: Double;
-{$endif}
 begin
-  {$ifndef FPC}
   Preview.ZoomFactor := Max(10, Preview.ZoomFactor - 10);
-  {$else}
-  //todo: see why the above code fails to compile with fpc
-  ZoomFactor := Preview.ZoomFactor - 10;
-  if ZoomFactor > 10 then
-    ZoomFactor := 10;
-  {$endif}
   UpdateComboBoxZoom;
 end;
 
@@ -1595,7 +1640,7 @@ begin
   if not (csDesigning in ComponentState) then
   begin
     if Assigned(SetupInstance) then
-      raise Exception.Create('Only one instance of ' + ClassName + ' is allowed.');
+      raise Exception.Create(GetLocalizeStr('Only one instance of ' + ClassName + ' is allowed.'));
     SetupInstance := Self;
   end;
 end;

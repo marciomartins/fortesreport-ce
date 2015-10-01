@@ -1,3 +1,51 @@
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
+{$I RLReport.inc}
+
 {@unit RLFilters - Implementação do filtro padrão de impressão e classes abstratas para filtros de gravação e impressão. }
 unit RLFilters;
 
@@ -10,17 +58,20 @@ unit RLFilters;
 interface
 
 uses
-  Classes, SysUtils, 
-{$ifndef LINUX}
-  Windows, 
-{$else}
-  Types, 
-{$endif}
-{$ifdef VCL}
-  Forms, Dialogs, 
-{$else}
-  QForms, QDialogs, 
-{$endif}
+  {$IfDef MSWINDOWS}
+   {$IfNDef FPC}
+    Windows,
+   {$EndIf}
+  {$EndIf}
+  Classes, SysUtils,
+  {$IfDef CLX}
+   QTypes, QForms, QDialogs,
+  {$Else}
+   Types, Forms, Dialogs,
+  {$EndIf}
+  {$IfDef FPC}
+   LCLIntf,
+  {$EndIf}
   RLMetaFile, RLConsts, RLTypes, RLUtils, RLFeedBack, RLPrinters;
 
 const
@@ -293,7 +344,8 @@ end;
 
 destructor TRLCustomFilter.Destroy;
 begin
-  ActiveFilters.Extract(Self);
+  if Assigned(ActiveFilters) then
+    ActiveFilters.Extract(Self);
   if SelectedFilter = Self then
     SelectedFilter := nil;
   if Assigned(FPages) then
@@ -387,7 +439,10 @@ begin
     CreateProgress;
   try
     if foEmulateCopies in FClassOptions then
-      copies := RLPrinter.Copies
+    begin
+      copies := RLPrinter.Copies;
+      RLPrinter.Copies := 1;  // To avoid double the copies
+    end
     else
       copies := 1;
     if FShowProgress then
@@ -413,6 +468,7 @@ begin
               DrawPage(page);
               if FShowProgress then
                 FProgress.Tick;
+
               if FCanceled then
                 Break;
             end;
@@ -453,7 +509,7 @@ end;
 
 procedure TRLCustomFilter.CreateProgress;
 begin
-  FProgress := TfrmRLFeedBack.Create(LocaleStrings.LS_FilterInProgressStr);
+  FProgress := TfrmRLFeedBack.Create(GetLocalizeStr(LocaleStrings.LS_FilterInProgressStr));
   FProgress.Show;
   FProgress.SetFocus;
   FProgress.OnCancel := ProgressCanceled;
@@ -521,7 +577,8 @@ initialization
   ActiveFilters := TList.Create;
 
 finalization
-  ActiveFilters.free;
+  FreeAndNil(ActiveFilters);
+
 
 end.
 

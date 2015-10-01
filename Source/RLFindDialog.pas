@@ -1,3 +1,51 @@
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
+{$I RLReport.inc}
+
 unit RLFindDialog;
 
 {$ifdef FPC}
@@ -9,12 +57,20 @@ unit RLFindDialog;
 interface
 
 uses
+  {$IfDef MSWINDOWS}
+   {$IfNDef FPC}
+    Windows,
+   {$EndIf}
+  {$EndIf}
   SysUtils, Contnrs, Classes, TypInfo,
-{$ifdef VCL}
-  Windows, Messages, Graphics, Controls, Forms, Dialogs, StdCtrls, Buttons, ExtCtrls,
-{$else}
-  Types, QControls, Qt, QButtons, QExtCtrls, QForms, QDialogs, QStdCtrls, QTypes, QGraphics,
-{$endif}
+  {$IfDef FPC}
+   LCLIntf, LCLType,
+  {$EndIf}
+  {$IfDef CLX}
+   QTypes, QGraphics, QControls, QForms, QDialogs, QStdCtrls, QButtons, QExtCtrls, Qt,
+  {$Else}
+   Types, Graphics, Controls, Forms, Dialogs, StdCtrls, Buttons, ExtCtrls,
+  {$EndIf}
   RLConsts, RLUtils, RLComponentFactory;
 
 type
@@ -77,16 +133,18 @@ begin
 end;
 
 procedure TfrmRLFindDialog.Init;
+Const
+  PlataformSpacing = {$IfDef FPC} 20 {$Else} 0{$EndIf};
 begin
   BorderIcons := [biSystemMenu];
-{$ifdef VCL}
-  BorderStyle := bsDialog;
-{$else}
-  BorderStyle := fbsDialog;
-{$endif}
+  {$ifdef CLX}
+   BorderStyle := fbsDialog;
+  {$else}
+   BorderStyle := bsDialog;
+  {$endif}
   Caption := 'Procurar';
-  ClientHeight := 94;
-  ClientWidth := 367;
+  ClientHeight := 94 + PlataformSpacing;
+  ClientWidth := 367 + PlataformSpacing;
   Color := clBtnFace;
   Position := poScreenCenter;
   OnDeactivate := FormDeactivate;
@@ -108,7 +166,7 @@ begin
     Parent := Self;
     Left := 48;
     Top := 12;
-    Width := 229;
+    Width := 229 + PlataformSpacing;
     Height := 21;
     TabOrder := 0;
   end;
@@ -117,7 +175,7 @@ begin
   begin
     Name := 'BitBtnFindNext';
     Parent := Self;
-    Left := 284;
+    Left := 284 + PlataformSpacing;
     Top := 12;
     Width := 75;
     Height := 21;
@@ -131,7 +189,7 @@ begin
   begin
     Name := 'BitBtnCancel';
     Parent := Self;
-    Left := 284;
+    Left := 284 + PlataformSpacing;
     Top := 36;
     Width := 75;
     Height := 21;
@@ -169,28 +227,28 @@ begin
   begin
     Name := 'RadioGroupDirection';
     Parent := Self;
-    Left := 204;
+    Left := 204 + PlataformSpacing;
     Top := 36;
     Width := 73;
-    Height := 49;
+    Height := 49 + PlataformSpacing;
     Caption := ' Direção ';
     TabOrder := 5;
   end;
 
   //
-  Caption := LocaleStrings.LS_FindCaptionStr;
-  LabelTextToFind.Caption := LocaleStrings.LS_TextToFindStr + ':';
+  Caption := GetLocalizeStr(LocaleStrings.LS_FindCaptionStr);
+  LabelTextToFind.Caption := GetLocalizeStr(LocaleStrings.LS_TextToFindStr + ':');
   EditTextToFind.Text := '';
-  BitBtnFindNext.Caption := LocaleStrings.LS_FindNextStr;
-  BitBtnCancel.Caption := LocaleStrings.LS_CancelStr;
-  CheckBoxWholeWords.Caption := LocaleStrings.LS_WholeWordsStr;
-  CheckBoxMatchCase.Caption := LocaleStrings.LS_MatchCaseStr;
+  BitBtnFindNext.Caption := GetLocalizeStr(LocaleStrings.LS_FindNextStr);
+  BitBtnCancel.Caption := GetLocalizeStr(LocaleStrings.LS_CancelStr);
+  CheckBoxWholeWords.Caption := GetLocalizeStr(LocaleStrings.LS_WholeWordsStr);
+  CheckBoxMatchCase.Caption := GetLocalizeStr(LocaleStrings.LS_MatchCaseStr);
 
-  RadioGroupDirection.Caption := ' ' + LocaleStrings.LS_DirectionCaptionStr + ' ';
+  RadioGroupDirection.Caption := GetLocalizeStr(' ' + LocaleStrings.LS_DirectionCaptionStr + ' ');
 
   RadioGroupDirection_GetItems.Clear;
-  RadioGroupDirection_GetItems.Add(LocaleStrings.LS_DirectionUpStr);
-  RadioGroupDirection_GetItems.Add(LocaleStrings.LS_DirectionDownStr);
+  RadioGroupDirection_GetItems.Add(GetLocalizeStr(LocaleStrings.LS_DirectionUpStr));
+  RadioGroupDirection_GetItems.Add(GetLocalizeStr(LocaleStrings.LS_DirectionDownStr));
   RadioGroupDirection_SetItemIndex(1);
 end;
 
@@ -262,7 +320,7 @@ begin
     end;
   end; 
   if not found then
-    ShowMessage(LocaleStrings.LS_NotFoundStr); 
+    ShowMessage(GetLocalizeStr(LocaleStrings.LS_NotFoundStr)); 
 end;
 
 destructor TfrmRLFindDialog.Destroy;

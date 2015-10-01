@@ -1,15 +1,63 @@
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
+{$I RLReport.inc}
+
 {@unit RLRichText - Implementação dos componentes de impressão de texto no formato RichText.}
 unit RLRichText;
 
 interface
 
 uses
-  Classes, SysUtils, Contnrs, Math, Types,
-{$ifdef CLX}
-  QGraphics, RLMetaCLX, 
-{$else}
-  Graphics, RLMetaVCL, 
-{$endif}
+  Classes, SysUtils, Contnrs, Math,
+  {$ifdef CLX}
+   QTypes, QGraphics, RLMetaCLX,
+  {$else}
+   Types, Graphics, RLMetaVCL,
+  {$EndIf}
   RLReport, RLUtils, RLMetaFile;
 
 type
@@ -189,7 +237,9 @@ type
   end;
   {/@class}
   
-  
+function RichTextBounds(const ARichText: String; ARect: TRect; AWordWrap: Boolean): TPoint;
+procedure RichTextDraw(const ARichText: String; ACanvas: TObject; ARect: TRect; AWordWrap: Boolean);
+
 {/@unit}
 
 implementation
@@ -238,6 +288,7 @@ var
   RGBList: TObjectList;
   RGB: TRichRGB;
   TextPos: TPoint;
+  MustResetLineHeight: Boolean;
   LineHeight: Integer;
   TextWidth: Integer;
   TextCut: Integer;
@@ -475,6 +526,7 @@ begin
   //
   TextPos := ARect.TopLeft;
   LineHeight := 0;
+  MustResetLineHeight := False;
   Level := 0;
   LevelSets[Level].Alignment := MetaTextAlignmentLeft;
   //
@@ -567,13 +619,13 @@ begin
                           begin
                             Inc(TextPos.Y, LineHeight);
                             TextPos.X := ARect.Left;
-                            LineHeight := 0;
+                            MustResetLineHeight := True;
                           end
                           else if Escape = 'pard' then
                           begin
                             Inc(TextPos.Y, LineHeight);
                             TextPos.X := ARect.Left;
-                            LineHeight := 0;
+                            MustResetLineHeight := True;
                             LevelSets[Level].Alignment := MetaTextAlignmentLeft;
                           end
                           else if Escape = 'f' then
@@ -643,6 +695,11 @@ begin
                             TextOut(TextPos.X, TextPos.Y, Copy(TokenText, 1, TextCut));
                             Inc(TextPos.X, TextWidth);
                             ASize.X := Max(ASize.X, TextPos.X);
+                            if MustResetLineHeight then
+                            begin
+                              LineHeight := 0;
+                              MustResetLineHeight := False;
+                            end;
                             LineHeight := Max(LineHeight, GetTextHeight(TokenText));
                             while (TextCut < Length(TokenText)) and CharInSet(TokenText[TextCut + 1], SPACESET) do
                               Inc(TextCut);
@@ -651,7 +708,7 @@ begin
                             begin
                               Inc(TextPos.Y, LineHeight);
                               TextPos.X := ARect.Left;
-                              LineHeight := 0;
+                              MustResetLineHeight := True;
                             end;
                           end;
                         end;

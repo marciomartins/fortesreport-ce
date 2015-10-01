@@ -1,11 +1,61 @@
-unit RLMetaVCL;
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
 
 {$I RLReport.inc}
+
+unit RLMetaVCL;
 
 interface
 
 uses
-  Windows, SysUtils, Graphics, Classes, Math, StdCtrls, 
+  {$IfDef MSWINDOWS}
+   Windows,
+  {$EndIf}
+  SysUtils, Classes, Math,
+  Graphics, StdCtrls,
   RLMetaFile, RLUtils, RLConsts;
 
 type
@@ -249,13 +299,10 @@ begin
     taRightJustify: Result := MetaTextAlignmentRight;
     taCenter: Result := MetaTextAlignmentCenter;
   else
-    //todo: See the need of this code
-    {
     if ASource = succ(taCenter) then
       Result := MetaTextAlignmentJustify
     else
       Result := MetaTextAlignmentLeft;
-    }
   end;
 end;
 
@@ -455,10 +502,7 @@ begin
     MetaTextAlignmentLeft: Result := taLeftJustify;
     MetaTextAlignmentRight: Result := taRightJustify;
     MetaTextAlignmentCenter: Result := taCenter;
-    //todo: See the meaning of this code
-    {
     MetaTextAlignmentJustify: Result := succ(taCenter);
-    }
   else
     Result := taLeftJustify;
   end;
@@ -559,7 +603,7 @@ var
   delta, left, top, txtw, txth, wid, I: Integer;
   buff: AnsiString;
 begin
-  buff := AText;
+  buff := AnsiString(AText);
   delta := ACanvas.TextWidth(' ') div 2;
   txtw := ACanvas.TextWidth(buff + ' ');
   txth := ACanvas.TextHeight(buff + ' ');
@@ -605,7 +649,12 @@ const
     (Count: 2;Lengths: (1, 1, 0, 0, 0, 0)), // psDot
     (Count: 4;Lengths: (2, 1, 1, 1, 0, 0)), // psDashDot
     (Count: 6;Lengths: (3, 1, 1, 1, 1, 1)), // psDashDotDot
-    (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)), // psClear - psInsideFrame in LCL
+{$IfDef FPC}
+    (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)), // psInsideFrame
+    (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)), // psPattern
+    (Count: 0;Lengths: (0, 0, 0, 0, 0, 0))  // psClear
+{$Else}
+    (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)), // psClear
 {$ifdef DELPHI2006}
     (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)), // psClear
     (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)), // psClear
@@ -613,14 +662,11 @@ const
     (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)),
 {$endif}
     (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)) // psInsideFrame
-{$if CompilerVersion >= 18}// delphi 2007 em diante
+{$IfDef DELPHI2007_UP}// delphi 2007 em diante
     ,
     (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)), // psUserStyle
     (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)) // psAlternate
-{$ifend}
-{$ifdef FPC}
-    ,
-    (Count: 0;Lengths: (0, 0, 0, 0, 0, 0)) // psClear in LCL
+{$endif}
 {$endif}
     );
 
@@ -688,10 +734,11 @@ begin
   end;
 end;
 
+{$IfDef MSWINDOWS}
 procedure FontGetMetrics(const AFontName: AnsiString; AFontStyles: TFontStyles; var AFontRec: TRLMetaFontMetrics);
 var
   size: Integer;
-  outl: POutlineTextmetricA;
+  outl: POutlineTextMetricA;
   I: Integer;
   bmp: TBitmap;
 begin
@@ -715,12 +762,14 @@ begin
     AFontRec.BaseFont := AFontName;
     AFontRec.FirstChar := Byte(outl^.otmTextMetrics.tmFirstChar);
     AFontRec.LastChar := Byte(outl^.otmTextMetrics.tmLastChar);
-    // o Win2K retorna zero como largura de todos os caracteres com a funcao GetCharWidth32
-    // vamos usar o modo dificil com TextWidth 
-    //GetCharWidth32(bmp.Canvas.Handle,aFontRec.FirstChar,aFontRec.LastChar,aFontRec.Widths[aFontRec.FirstChar]);
+
+    {$IfDef FPC}
+    GetCharWidth(bmp.Canvas.Handle,aFontRec.FirstChar,aFontRec.LastChar,aFontRec.Widths[aFontRec.FirstChar]);
+    {$Else}
     for I := AFontRec.FirstChar to AFontRec.LastChar do
       AFontRec.Widths[I] := bmp.Canvas.TextWidth(Chr(I));
-    //
+    {$EndIf}
+
     AFontRec.FontDescriptor.Name := AFontName;
     AFontRec.FontDescriptor.Styles := '';
     if fsBold in AFontStyles then
@@ -748,6 +797,50 @@ begin
     FreeMem(outl, size);
   end;
 end;
+{$Else}
+// Extraido do projeto Fortes4Lazarus
+procedure FontGetMetrics(const aFontName:string; aFontStyles:TFontStyles; var aFontRec:TRLMetaFontMetrics);
+var
+  bmp:TBitmap;
+  i  :integer;
+begin
+  bmp := NeedAuxBitmap;
+  bmp.Canvas.Font.Name := aFontName;
+  bmp.Canvas.Font.Style := aFontStyles;
+  bmp.Canvas.Font.Size := 750;
+  //
+  aFontRec.TrueType := True;
+  aFontRec.BaseFont := aFontName;
+  aFontRec.FirstChar := 32;
+  aFontRec.LastChar := 255;
+  for i:=aFontRec.FirstChar to aFontRec.LastChar do
+    aFontRec.Widths[i] := bmp.Canvas.TextWidth( GetLocalizeStr(Chr(i)) );
+  //
+  aFontRec.FontDescriptor.Name := aFontName;
+  aFontRec.FontDescriptor.Styles := '';
+  if fsBold in aFontStyles then
+    aFontRec.FontDescriptor.Styles := aFontRec.FontDescriptor.Styles+'Bold';
+  if fsItalic in aFontStyles then
+    aFontRec.FontDescriptor.Styles := aFontRec.FontDescriptor.Styles+'Italic';
+  if fsUnderline in aFontStyles then
+    aFontRec.FontDescriptor.Styles := aFontRec.FontDescriptor.Styles+'Underline';
+  if fsStrikeOut in aFontStyles then
+    aFontRec.FontDescriptor.Styles := aFontRec.FontDescriptor.Styles+'StrikeOut';
+  aFontRec.FontDescriptor.Flags :=32;
+  aFontRec.FontDescriptor.FontBBox := Rect(-498,1023,1120,-307);
+  aFontRec.FontDescriptor.MissingWidth := 0;
+  aFontRec.FontDescriptor.StemV := 0;
+  aFontRec.FontDescriptor.StemH := 0;
+  aFontRec.FontDescriptor.ItalicAngle := 0;
+  aFontRec.FontDescriptor.CapHeight := 0;
+  aFontRec.FontDescriptor.XHeight := 0;
+  aFontRec.FontDescriptor.Ascent := 0;
+  aFontRec.FontDescriptor.Descent := 0;
+  aFontRec.FontDescriptor.Leading := 0;
+  aFontRec.FontDescriptor.MaxWidth := 0;
+  aFontRec.FontDescriptor.AvgWidth := 0;
+end;
+{$EndIf}
 
 end.
 

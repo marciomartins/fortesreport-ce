@@ -1,3 +1,51 @@
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
+{$I RLReport.inc}
+
 unit RLFeedBack;
 
 {$ifdef FPC}
@@ -10,11 +58,11 @@ interface
 
 uses
   SysUtils, Classes,
-{$ifdef VCL}
-  Graphics, Forms, Dialogs, StdCtrls, ExtCtrls, Buttons, Controls, ComCtrls,
-{$else}
-  QTypes, QGraphics, QForms, QDialogs, QStdCtrls, QExtCtrls, QButtons, QControls, QComCtrls,
-{$endif}
+  {$IfDef CLX}
+   QTypes, QGraphics, QForms, QDialogs, QStdCtrls, QExtCtrls, QButtons, QControls, QComCtrls,
+  {$Else}
+   types, Graphics, Forms, Dialogs, StdCtrls, ExtCtrls, Buttons, Controls, ComCtrls,
+  {$EndIf}
   RLUtils, RLComponentFactory;
 
 type
@@ -75,11 +123,11 @@ begin
   Font.Pitch := fpVariable;
   Font.Style := [];
   Position := poScreenCenter;
-{$ifdef VCL}
-  BorderStyle := bsDialog
-{$else}
-  BorderStyle := fbsDialog;
-{$endif};
+  {$ifdef CLX}
+   BorderStyle := fbsDialog;
+  {$else}
+   BorderStyle := bsDialog
+  {$endif};
   PixelsPerInch := 96;
   TRLComponentFactory.CreateComponent(TLabel, Self, LabelStepName);
   with LabelStepName do
@@ -136,8 +184,8 @@ begin
     Top := 64;
   end;
   //
-  BitBtnCancel.Caption := LocaleStrings.LS_CancelStr;
-  LabelStepName.Caption := LocaleStrings.LS_WaitStr;
+  BitBtnCancel.Caption := GetLocalizeStr(LocaleStrings.LS_CancelStr);
+  LabelStepName.Caption := GetLocalizeStr(LocaleStrings.LS_WaitStr);
 end;
 
 constructor TfrmRLFeedBack.Create(const ATitle: String; ALevels: Integer = 1);
@@ -212,9 +260,9 @@ end;
 
 procedure TfrmRLFeedBack.Finish;
 begin
-  LabelStepName.Caption := LocaleStrings.LS_FinishedStr;
+  LabelStepName.Caption := GetLocalizeStr(LocaleStrings.LS_FinishedStr);
   BitBtnCancel.Kind := bkOk;
-  BitBtnCancel.Caption := LocaleStrings.LS_CloseStr;
+  BitBtnCancel.Caption := GetLocalizeStr(LocaleStrings.LS_CloseStr);
   BitBtnCancel.Default := True;
   TimerBlink.Enabled := True;
   while not Finished do 

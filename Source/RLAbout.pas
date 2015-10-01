@@ -1,3 +1,50 @@
+{******************************************************************************}
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
 {$I RLReport.inc}
 
 unit RLAbout;
@@ -5,20 +52,26 @@ unit RLAbout;
 interface
 
 uses
-  SysUtils, Classes,
-{$ifdef MSWINDOWS}
-  ShellAPI,
-{$endif}
-{$ifdef VCL}
-  Windows, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, Buttons,
-{$endif}
-{$ifdef CLX}
-  Types,
-  Qt, QGraphics, QControls, QForms, QDialogs, QStdCtrls, QExtCtrls, QButtons,
-{$endif}
+  {$IfDef MSWINDOWS}
+   {$IfNDef FPC}
+    Windows, ShellAPI,
+   {$EndIf}
+  {$EndIf}
+  Classes, SysUtils,
+  {$IfDef CLX}
+   QTypes, Qt, QGraphics, QControls, QForms, QDialogs, QStdCtrls, QExtCtrls, QButtons,
+  {$Else}
+   Types, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, Buttons,
+  {$EndIf}
+  {$ifdef FPC}
+   LCLIntf, LCLType,
+  {$endif}
   RLConsts, RLUtils, RLComponentFactory;
 
 type
+
+  { TFormRLAbout }
+
   TFormRLAbout = class(TForm)
     ImageLogo: TImage;
     LabelTitle: TLabel;
@@ -60,21 +113,20 @@ begin
     if SameText(TypedAuthorKey, TheAuthorKey) then
       Caption := 'Autor: ' + CS_AuthorNameStr;
   end;
-{$ifdef CLX}
-  if Key = key_escape then
+
+  if Key = {$IfDef CLX}key_escape{$Else}vk_escape{$EndIf} then
     BitBtnOk.Click;
-{$endif}
-{$ifdef VCL}
-  if Key = vk_escape then
-    BitBtnOk.Click;
-{$endif}
 end;
 
 procedure TFormRLAbout.LabelHomeClick(Sender: TObject);
 begin
-{$ifdef MSWINDOWS}
-  ShellExecute(0, nil, PChar(TLabel(Sender).Hint), nil, nil, SW_SHOWNORMAL);
-{$endif}
+  {$IfDef FPC}
+    OpenDocument(PChar(TLabel(Sender).Hint));
+  {$Else}
+   {$IfDef MSWINDOWS}
+    ShellExecute(0, nil, PChar(TLabel(Sender).Hint), nil, nil, SW_SHOWNORMAL);
+   {$EndIf}
+  {$EndIf}
 end;
 
 procedure TFormRLAbout.Init;
@@ -82,12 +134,12 @@ begin
   Left := 250;
   Top := 223;
   ActiveControl := BitBtnOk;
-{$ifdef VCL}
-  BorderStyle := bsDialog;
-{$else}
-  BorderStyle := fbsDialog;
-{$endif};
-  Caption := LocaleStrings.LS_AboutTheStr + ' ' + CS_ProductTitleStr;
+  {$ifdef CLX}
+   BorderStyle := fbsDialog;
+  {$else}
+   BorderStyle := bsDialog;
+  {$endif};
+  Caption := GetLocalizeStr(LocaleStrings.LS_AboutTheStr + ' ' + CS_ProductTitleStr);
   ClientHeight := 155;
   ClientWidth := 373;
   Color := clWhite;
@@ -160,12 +212,15 @@ begin
     Top := 32;
     Width := 65;
     Height := 13;
-{$ifdef VCL}
-    Caption := CS_Version + ' VCL';
-{$endif}
-{$ifdef CLX}
-    Caption := CS_Version + ' CLX';
-{$endif}
+    {$ifdef CLX}
+     Caption := CS_Version + ' CLX';
+    {$Else}
+     {$ifdef FPC}
+      Caption := CS_Version + ' LCL';
+     {$else}
+      Caption := CS_Version + ' VCL';
+     {$endif}
+    {$endif}
     Font.Name := 'helvetica';
     Font.Color := clBlack;
     Font.Height := 13;
@@ -183,7 +238,7 @@ begin
     Top := 56;
     Width := 211;
     Height := 14;
-    Caption := CS_CopyrightStr + #13 + CS_AuthorNameStr;
+    Caption := GetLocalizeStr(CS_CopyrightStr + #13 + CS_AuthorNameStr);
     Font.Name := 'helvetica';
     Font.Color := clBlack;
     Font.Height := -11;

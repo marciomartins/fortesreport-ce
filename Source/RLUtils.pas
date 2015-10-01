@@ -1,15 +1,78 @@
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
+{$I RLReport.inc}
+
+{$IfNDef DELPHI2007_UP}
+ {$Define NO_CHARINSET}
+{$EndIf}
+{$IfDef FPC}
+ {$Define NO_CHARINSET}
+{$EndIf}
+
+
 {@unit RLUtils - Rotinas de uso geral. }
 unit RLUtils;
-
-{$i RLReport.inc}
 
 interface
 
 uses
-  SysUtils, Classes, Math, DB,
-  Windows,
-  Types,
-  Graphics, Forms;
+  {$IfDef MSWINDOWS}
+   Windows,
+  {$EndIf}
+  SysUtils, Classes, DB,
+  {$IfDef FPC}
+   FileUtil,
+  {$EndIf}
+  {$IfDef CLX}
+   QTypes, QGraphics, QForms,
+  {$Else}
+   Types, Graphics, Forms,
+  {$EndIf}
+  Math;
 
 {@var TempDir - Especifica aonde deverão ser criados os arquivos temporários.
  Na inicialização do sistema é atribuido um valor padrão a esta variável. Este valor pode ser alterado depois.
@@ -137,8 +200,8 @@ function IterateJustification(var AText: AnsiString; var AIndex: Integer): Boole
 {@func ScaleRect - Calcula a maior amostra do retângulo aSource escalonado de modo a caber em aTarget. :/}
 function ScaleRect(const ASource, ATarget: TRect; ACenter: Boolean): TRect;
 
-procedure StreamWrite(AStream: TStream; const AStr: AnsiString);
-procedure StreamWriteLn(AStream: TStream; const AStr: AnsiString = '');
+procedure StreamWrite(AStream: TStream; const AStr: string);
+procedure StreamWriteLn(AStream: TStream; const AStr: string = '');
 
 {@proc RegisterTempFile - Registra um arquivo temporário para ser excluído na finalização. :/}
 procedure RegisterTempFile(const AFileName: String);
@@ -157,7 +220,7 @@ procedure LogClear;
 procedure Log(const AMsg: String);
 
 type
-{$ifdef KYLIX}
+{$ifdef CLX}
   TRGBQuad = packed record
     rgbBlue: Byte;
     rgbGreen: Byte;
@@ -168,17 +231,20 @@ type
   TRGBArray = array[0..0] of TRGBQuad;
   PRGBArray = ^TRGBArray;
 
-{$ifdef KYLIX}
+{$ifdef CLX}
 function RGB(R, G, B: Byte): TColor;
 {$endif}
 
 function NeedAuxBitmap: TBitmap;
 function NewBitmap: TBitmap; overload;
 function NewBitmap(Width, Height: Integer): TBitmap; overload;
-{$ifdef fpc or DELPHI2009_DOWN}
+{$IfDef NO_CHARINSET}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
 function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
-{$ifend}
+{$EndIf}
+
+function GetLocalizeStr(AString: AnsiString) : String;
+function GetAnsiStr(AString: String) : AnsiString;
 
 {/@unit}
 
@@ -188,7 +254,7 @@ type
 
 implementation
 
-{$ifdef fpc or DELPHI2009_DOWN}
+{$IfDef NO_CHARINSET}
 function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean;
 begin
   Result := C in CharSet;
@@ -197,8 +263,38 @@ end;
 function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean;
 begin
   Result := (C < #$0100) and (AnsiChar(C) in CharSet);
-end; 
-{$ifend}
+end;
+{$EndIf}
+
+function GetLocalizeStr(AString : AnsiString ): String;
+begin
+{$ifdef UNICODE}
+ {$ifdef USE_LConvEncoding}
+   Result := CP1252ToUTF8(AString);
+ {$else}
+   {$ifdef FPC}
+     {$ifndef NOGUI}
+       Result := SysToUTF8(AString);
+     {$else}
+       Result := AnsiToUtf8(AString);
+     {$endif}
+   {$else}
+     Result := String(AnsiToUtf8(String(AString)));
+   {$endif}
+ {$endif}
+{$else}
+  Result := AString;
+{$endif}
+end;
+
+function GetAnsiStr(AString: String): AnsiString;
+begin
+{$IFDEF UNICODE}
+  Result := Utf8ToAnsi(AString);
+{$Else}
+  Result := AString;
+{$EndIf}
+end;
 
 function NewBitmap: TBitmap;
 begin
@@ -279,7 +375,7 @@ begin
   pointer(APtr) := nil;
 end;
 
-{$ifdef KYLIX}
+{$ifdef CLX}
 function RGB(R, G, B: Byte): TColor;
 begin
   Result := (R or (G shl 8) or (B shl 16));
@@ -545,12 +641,8 @@ begin
   if Result <> '' then
     Result := Result + '|';
   Result := Result + ADescription + ' (*' + FormatFileExt(AExt) + ')';
-{$ifdef VCL}
+
   Result := Result + '|*' + FormatFileExt(AExt);
-{$else} {$ifdef DELPHI7}
-  Result := Result + '|*' + FormatFileExt(AExt);
-{$endif}
-{$endif}
 end;
 
 function GetFileFilterExt(const AFilter: String; AIndex: Integer): String;
@@ -571,12 +663,6 @@ begin
     if P > 0 then
       M := Copy(M, 1, P - 1);
     Inc(I);
-{$ifdef VCL}
-    Inc(I);
-{$else} {$ifdef DELPHI7}
-    Inc(I);
-{$endif}
-{$endif}
   end;
   P := Pos('.', M);
   if P > 0 then
@@ -627,7 +713,7 @@ end;
 
 procedure RotateBitmap(ASource, ADest: TBitmap; AAngle: Double; AAxis, AOffset: TPoint);
 type
-{$ifdef KYLIX}
+{$ifdef CLX}
   TRGBQuad = packed record
     rgbBlue: Byte;
     rgbGreen: Byte;
@@ -960,13 +1046,16 @@ begin
     OffsetRect(Result, (tw - W) div 2, (th - H) div 2);
 end;
 
-procedure StreamWrite(AStream: TStream; const AStr: AnsiString);
+procedure StreamWrite(AStream: TStream; const AStr: string);
+var
+  AnsiAux: AnsiString;
 begin
-  if AStr <> '' then
-    AStream.Write(AStr[1], Length(AStr));
+  AnsiAux := AnsiString(AStr);
+  if AnsiAux <> '' then
+    AStream.Write(AnsiAux[1], Length(AnsiAux));
 end;
 
-procedure StreamWriteLn(AStream: TStream; const AStr: AnsiString = '');
+procedure StreamWriteLn(AStream: TStream; const AStr: string = '');
 begin
   StreamWrite(AStream, AStr);
   StreamWrite(AStream, #13#10);
@@ -1024,5 +1113,4 @@ finalization
   ClearTempFiles;
   FreeObj(AuxBitmap);
 
-end.
-
+end.  

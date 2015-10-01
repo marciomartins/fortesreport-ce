@@ -1,22 +1,71 @@
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
+{$I RLReport.inc}
+
 {@unit RLRichFilter - Implementação do filtro para geração de arquivos no formato RichText. }
 unit RLRichFilter;
-
-{$i RLReport.inc}
 
 interface
 
 uses
-{$ifndef FPC}
-  Windows,
-{$else}
-  LCLIntf,
-{$endif}
+  {$IfDef MSWINDOWS}
+   {$IfNDef FPC}
+    Windows,
+   {$EndIf}
+  {$EndIf}
   SysUtils, Classes, Types,
-{$ifdef VCL}
-  Graphics, RLMetaVCL, 
-{$else}
-  QGraphics, RLMetaCLX, 
-{$endif}
+  {$IfDef FPC}
+   LCLIntf,
+  {$endif}
+  {$IfDef CLX}
+   QGraphics, RLMetaCLX,
+  {$Else}
+   Graphics, RLMetaVCL,
+  {$EndIf}
   RLMetaFile, RLFilters, RLTypes, RLConsts, RLUtils;
 
 type
@@ -178,7 +227,7 @@ var
   I: Integer;
   S: AnsiString;
 begin
-  S := IntToHex(AInt, AWid);
+  S := AnsiString(IntToHex(AInt, AWid));
   SetLength(Result, AWid);
   I := 1;
   while I <= Length(S) do
@@ -201,7 +250,7 @@ begin
   FFontNames := TStringList.Create;
   //
   DefaultExt := '.rtf';
-  DisplayName := LocaleStrings.LS_RichFormatStr;
+  DisplayName := GetLocalizeStr(LocaleStrings.LS_RichFormatStr);
 end;
 
 destructor TRLRichFilter.Destroy;

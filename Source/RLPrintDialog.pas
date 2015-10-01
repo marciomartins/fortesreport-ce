@@ -1,25 +1,71 @@
-unit RLPrintDialog;
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
 
-{$ifdef FPC}
-{$mode delphi}
-{$endif}
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
 
 {$I RLReport.inc}
+
+unit RLPrintDialog;
 
 interface
 
 uses
-  Classes, SysUtils, Math, 
-{$ifndef LINUX}
-  Windows, 
-{$else}
-{$endif}
-{$ifdef VCL}
-  Messages, Graphics, Controls, Forms, Dialogs, StdCtrls, 
-{$else}
-  QGraphics, QControls, QForms, QDialogs, QStdCtrls, 
-{$endif}
-  RLFilters, RLConsts, RLPrinters, RLTypes, RLComponentFactory;
+  {$IfDef MSWINDOWS}
+   {$IfNDef FPC}
+    Windows, Messages,
+   {$EndIf}
+  {$EndIf}
+  Classes, SysUtils, Math,
+  {$IfDef FPC}
+   LCLIntf, LCLType,
+  {$EndIf}
+  {$IfDef CLX}
+   QGraphics, QControls, QForms, QDialogs, QStdCtrls,
+  {$Else}
+   Graphics, Controls, Forms, Dialogs, StdCtrls,
+  {$EndIf}
+  RLFilters, RLConsts, RLPrinters, RLTypes, RLUtils, RLComponentFactory;
 
 type
   TRLPrintDialogOption = (rpoPrintToFile, rpoPageNums, rpoSelection, rpoWarning, rpoHelp, rpoDisablePrintToFile);
@@ -236,8 +282,9 @@ var
   I: Integer;
 begin
   SetLength(ColSizes, Length(AColSizes));
+
   for I := 0 to Length(AColSizes) - 1 do
-    ColSizes[I] := AColSizes[I]
+    ColSizes[I] := AColSizes[I];
 end;
 
 procedure TableLayout(ARows: array of TControlArray; const AMargins: TRect;
@@ -281,11 +328,21 @@ end;
 
 procedure TRLPrintDialog.Init;
 const
+  {$IfDef FPC}
+  GroupMarginX = 8;
+  GroupMarginY = 2;
+  LineHeight = 21;
+  LineSpacing = 6;
+  ColSpacing = 4;
+  PlataformSpacing = 5;
+  {$Else}
   GroupMarginX = 8;
   GroupMarginY = 16;
   LineHeight = 21;
   LineSpacing = 4;
   ColSpacing = 4;
+  PlataformSpacing = 0;
+  {$EndIf}
 var
   TableLayout: TTableLayout;
   BottomLine, MiddleCol: Integer;
@@ -294,13 +351,16 @@ begin
   BorderWidth := 8;
   Caption := 'Imprimir';
   Position := poScreenCenter;
-  {$ifndef FPC}
+{$IfNDef FPC}
   Scaled := False;
-  {$endif}
-{$ifdef VCL}
-  BorderStyle := bsDialog;
-{$else}
+{$Else}
+  BorderSpacing.InnerBorder := LineSpacing;
+{$EndIf}
+
+{$ifdef CLX}
   BorderStyle := fbsDialog;
+{$else}
+  BorderStyle := bsDialog;
 {$endif};
 
   TRLComponentFactory.CreateComponent(TGroupBox, Self, GroupBoxPrinter);
@@ -336,7 +396,7 @@ begin
     Name := 'LabelOptions';
     Parent := GroupBoxPrinter;
     AutoSize := True;
-    Caption := 'Opções do filtro:';
+    Caption := GetLocalizeStr('Opções do filtro:');
   end;
 
   TRLComponentFactory.CreateComponent(TComboBox, Self, ComboBoxPrinterNames);
@@ -397,8 +457,9 @@ begin
   begin
     Name := 'GroupBoxPages';
     Parent := Self;
-    Caption := 'Intervalo de páginas';
+    Caption := GetLocalizeStr('Intervalo de páginas');
     TabOrder := 1;
+    //{$IfDef FPC}Height := 160;{$EndIf}
   end;
 
   TRLComponentFactory.CreateComponent(TLabel, Self, LabelToPage);
@@ -502,7 +563,7 @@ begin
   begin
     Name := 'LabelCopies';
     Parent := GroupBoxCopies;
-    Caption := 'Número de &cópias:';
+    Caption := GetLocalizeStr('Número de &cópias:');
   end;
 
   TRLComponentFactory.CreateComponent(TEdit, Self, EditCopies);
@@ -520,7 +581,7 @@ begin
     Name := 'LabelOddPages';
     Parent := GroupBoxCopies;
     Alignment := taRightJustify;
-    Caption := 'Pares/'#237'mpares:';
+    Caption := GetLocalizeStr('Pares/'#237'mpares:');
     FocusControl := ComboBoxOddPages;
   end;
 
@@ -532,7 +593,7 @@ begin
     Style := csDropDownList;
     ItemHeight := 13;
     TabOrder := 1;
-    Items.Text := 'Pares'#13#10#205'mpares'#13#10'Todas';
+    Items.Text := GetLocalizeStr('Pares'#13#10#205'mpares'#13#10'Todas');
   end;
 
   TRLComponentFactory.CreateComponent(TGroupBox, Self, GroupBoxDuplex);
@@ -549,7 +610,7 @@ begin
     Name := 'CheckBoxDuplex';
     Parent := GroupBoxDuplex;
     TabStop := False;
-    Caption := 'Impressão frente e verso';
+    Caption := GetLocalizeStr('Impressão frente e verso');
     TabOrder := 0;
   end;
 
@@ -583,28 +644,28 @@ begin
   LabelToPage.FocusControl := EditToPage;
   LabelFromPage.FocusControl := EditFromPage;
   //
-  LabelPageSelectionHint.Caption := LocaleStrings.LS_PageSelectionHint;
-  Caption := LocaleStrings.LS_PrintStr;
-  GroupBoxPrinter.Caption := ' ' + LocaleStrings.LS_PrinterStr + ' ';
-  LabelPrinterName.Caption := LocaleStrings.LS_NameStr + ':';
-  LabelFilterName.Caption := LocaleStrings.LS_UseFilterStr + ':';
-  CheckBoxPrintToFile.Caption := LocaleStrings.LS_PrintToFileStr;
-  GroupBoxPages.Caption := ' ' + LocaleStrings.LS_PageRangeStr + ' ';
-  LabelFromPage.Caption := LocaleStrings.LS_RangeFromStr + ':';
-  LabelToPage.Caption := LocaleStrings.LS_RangeToStr + ':';
-  RadioButtonPagesAll.Caption := LocaleStrings.LS_AllStr;
-  RadioButtonPagesInterval.Caption := LocaleStrings.LS_PagesStr;
-  RadioButtonPagesSelect.Caption := LocaleStrings.LS_SelectionStr;
-  GroupBoxCopies.Caption := ' ' + LocaleStrings.LS_CopiesStr + ' ';
+  LabelPageSelectionHint.Caption := GetLocalizeStr(LocaleStrings.LS_PageSelectionHint);
+  Caption := GetLocalizeStr(LocaleStrings.LS_PrintStr);
+  GroupBoxPrinter.Caption := GetLocalizeStr(' ' + LocaleStrings.LS_PrinterStr + ' ');
+  LabelPrinterName.Caption := GetLocalizeStr(LocaleStrings.LS_NameStr + ':');
+  LabelFilterName.Caption := GetLocalizeStr(LocaleStrings.LS_UseFilterStr + ':');
+  CheckBoxPrintToFile.Caption := GetLocalizeStr(LocaleStrings.LS_PrintToFileStr);
+  GroupBoxPages.Caption := GetLocalizeStr(' ' + LocaleStrings.LS_PageRangeStr + ' ');
+  LabelFromPage.Caption := GetLocalizeStr(LocaleStrings.LS_RangeFromStr + ':');
+  LabelToPage.Caption := GetLocalizeStr(LocaleStrings.LS_RangeToStr + ':');
+  RadioButtonPagesAll.Caption := GetLocalizeStr(LocaleStrings.LS_AllStr);
+  RadioButtonPagesInterval.Caption := GetLocalizeStr(LocaleStrings.LS_PagesStr);
+  RadioButtonPagesSelect.Caption := GetLocalizeStr(LocaleStrings.LS_SelectionStr);
+  GroupBoxCopies.Caption := GetLocalizeStr(' ' + LocaleStrings.LS_CopiesStr + ' ');
   EditCopies.Text := IntToStr(RLPrinter.Copies);
-  LabelCopies.Caption := LocaleStrings.LS_NumberOfCopiesStr + ':';
-  ButtonOk.Caption := LocaleStrings.LS_OkStr;
-  ButtonCancel.Caption := LocaleStrings.LS_CancelStr;
-  LabelOddPages.Caption := LocaleStrings.LS_OddPages + '/' + LocaleStrings.LS_EvenPages + ':';
+  LabelCopies.Caption := GetLocalizeStr(LocaleStrings.LS_NumberOfCopiesStr + ':');
+  ButtonOk.Caption := GetLocalizeStr(LocaleStrings.LS_OkStr);
+  ButtonCancel.Caption := GetLocalizeStr(LocaleStrings.LS_CancelStr);
+  LabelOddPages.Caption := GetLocalizeStr(LocaleStrings.LS_OddPages + '/' + LocaleStrings.LS_EvenPages + ':');
   ComboBoxOddPages.Items.Text :=
-    LocaleStrings.LS_OddPagesOnly + #13#10 +
+    GetLocalizeStr(LocaleStrings.LS_OddPagesOnly + #13#10 +
     LocaleStrings.LS_EvenPagesOnly + #13#10 +
-    LocaleStrings.LS_AllOddAndEven;
+    LocaleStrings.LS_AllOddAndEven);
   case RLPrinter.OddEven of
     odOddPagesOnly: ComboBoxOddPages.ItemIndex := 0;
     odEvenPagesOnly: ComboBoxOddPages.ItemIndex := 1;
@@ -616,43 +677,47 @@ begin
 
 
   //
-  Self.ClientWidth := 560;
-  Self.ClientHeight := 280;
+  Self.ClientWidth := 560 + (PlataformSpacing*4);
+  Self.ClientHeight := 280 + (PlataformSpacing*4);
   MiddleCol := 240;
   GroupBoxPrinter.SetBounds(0, 0, Self.ClientWidth, 100);
   BottomLine := GroupBoxPrinter.BoundsRect.Bottom;
-  GroupBoxPages.SetBounds(0, BottomLine, MiddleCol, 140);
+  GroupBoxPages.SetBounds(0, BottomLine, MiddleCol, 140 + (PlataformSpacing*4));
   Inc(MiddleCol, ColSpacing);
-  GroupBoxCopies.SetBounds(MiddleCol, BottomLine, Self.ClientWidth - MiddleCol, 70);
+  GroupBoxCopies.SetBounds(MiddleCol, BottomLine, Self.ClientWidth - MiddleCol, 70 + (PlataformSpacing*2));
   BottomLine := GroupBoxCopies.BoundsRect.Bottom;
-  GroupBoxDuplex.SetBounds(MiddleCol, BottomLine, GroupBoxCopies.Width, 70);
+  GroupBoxDuplex.SetBounds(MiddleCol, BottomLine, GroupBoxCopies.Width, 70 + (PlataformSpacing*2));
   BottomLine := GroupBoxPages.BoundsRect.Bottom + LineSpacing;
-  ButtonCancel.SetBounds(Self.ClientWidth - 75, BottomLine, 75, 25);
+  ButtonCancel.SetBounds(Self.ClientWidth - PlataformSpacing - 75, BottomLine, 75, 25);
   ButtonOk.SetBounds(ButtonCancel.BoundsRect.Left - ColSpacing - 75, BottomLine, 75, 25);
   //
   TableLayout := TTableLayout.Create;
-  TableLayout.LineHeight := LineHeight;
-  TableLayout.Spacing := Point(ColSpacing, LineSpacing);
-  TableLayout.Margins := Rect(GroupMarginX, GroupMarginY, GroupMarginX, GroupMarginY);
+  try
+    TableLayout.LineHeight := LineHeight;
+    TableLayout.Spacing := Point(ColSpacing, LineSpacing);
+    TableLayout.Margins := Rect(GroupMarginX, GroupMarginY, GroupMarginX, GroupMarginY);
 
-  TableLayout.SetColWidths([50, 365, 120]);
-  TableLayout.Row(0, [LabelPrinterName, ComboBoxPrinterNames, ButtonPrinterSetup]);
-  TableLayout.Row(1, [LabelFilterName, ComboBoxFilters, CheckBoxPrintToFile]);
-  TableLayout.Row(2, [LabelOptions, ComboBoxOptions]);
+    TableLayout.SetColWidths([55, 360, 120]);
+    TableLayout.Row(0, [LabelPrinterName, ComboBoxPrinterNames, ButtonPrinterSetup]);
+    TableLayout.Row(1, [LabelFilterName, ComboBoxFilters, CheckBoxPrintToFile]);
+    TableLayout.Row(2, [LabelOptions, ComboBoxOptions]);
 
-  TableLayout.SetColWidths([65, 20, 50, 20, 50]);
-  TableLayout.Cell(0, 0, RadioButtonPagesAll);
-  TableLayout.Row(1, [RadioButtonPagesInterval, LabelFromPage, EditFromPage, LabelToPage, EditToPage]);
-  TableLayout.Cell(2, 0, RadioButtonPagesSelect);
-  TableLayout.Range(2, 1, 2, 4, EditPageSelection);
-  TableLayout.Range(3, 0, 4, 4, LabelPageSelectionHint);
+    TableLayout.SetColWidths([65, 20, 50, 20, 50]);
+    TableLayout.Cell(0, 0, RadioButtonPagesAll);
+    TableLayout.Row(1, [RadioButtonPagesInterval, LabelFromPage, EditFromPage, LabelToPage, EditToPage]);
+    TableLayout.Cell(2, 0, RadioButtonPagesSelect);
+    TableLayout.Range(2, 1, 2, 4, EditPageSelection);
+    TableLayout.Range(3, 0, 4, 4, LabelPageSelectionHint);
 
-  TableLayout.SetColWidths([100, 195]);
-  TableLayout.Row(0, [LabelCopies, EditCopies]);
-  TableLayout.Row(1, [LabelOddPages, ComboBoxOddPages]);
+    TableLayout.SetColWidths([100, 195]);
+    TableLayout.Row(0, [LabelCopies, EditCopies]);
+    TableLayout.Row(1, [LabelOddPages, ComboBoxOddPages]);
 
-  TableLayout.SetColWidths([200]);
-  TableLayout.Row(0, [CheckBoxDuplex]);
+    TableLayout.SetColWidths([200]);
+    TableLayout.Row(0, [CheckBoxDuplex]);
+  finally
+    TableLayout.Free;
+  end;
 end;
 
 procedure TRLPrintDialog.LoadPrinterList;
@@ -680,7 +745,7 @@ var
   F: TRLCustomPrintFilter;
 begin
   ComboBoxFilters.Items.Clear;
-  ComboBoxFilters.Items.AddObject(LocaleStrings.LS_DefaultStr, nil);
+  ComboBoxFilters.Items.AddObject(GetLocalizeStr(LocaleStrings.LS_DefaultStr), nil);
   //
   J := 0;
   for I := 0 to ActiveFilters.Count - 1 do
@@ -836,7 +901,7 @@ begin
   Screen.Cursor := crHourGlass;
   try
     if not RLPrinter.ExecuteSetup then
-      ShowMessage(LocaleStrings.LS_PrintDialogError);
+      ShowMessage(GetLocalizeStr(LocaleStrings.LS_PrintDialogError));
   finally
     Screen.Cursor := crDefault;
     ButtonPrinterSetup.Enabled := True;

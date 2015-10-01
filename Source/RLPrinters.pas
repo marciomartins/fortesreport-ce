@@ -1,22 +1,74 @@
+{ Projeto: FortesReport Community Edition                                      }
+{ É um poderoso gerador de relatórios disponível como um pacote de componentes }
+{ para Delphi. Em FortesReport, os relatórios são constituídos por bandas que  }
+{ têm funções específicas no fluxo de impressão. Você definir agrupamentos     }
+{ subníveis e totais simplesmente pela relação hierárquica entre as bandas.    }
+{ Além disso possui uma rica paleta de Componentes                             }
+{                                                                              }
+{ Direitos Autorais Reservados(c) Copyright © 1999-2015 Fortes Informática     }
+{                                                                              }
+{ Colaboradores nesse arquivo: Ronaldo Moreira                                 }
+{                              Márcio Martins                                  }
+{                              Régys Borges da Silveira                        }
+{                              Juliomar Marchetti                              }
+{                                                                              }
+{  Você pode obter a última versão desse arquivo na pagina do Projeto          }
+{  localizado em                                                               }
+{ https://github.com/fortesinformatica/fortesreport-ce                         }
+{                                                                              }
+{  Para mais informações você pode consultar o site www.fortesreport.com.br ou }
+{  no Yahoo Groups https://groups.yahoo.com/neo/groups/fortesreport/info       }
+{                                                                              }
+{  Esta biblioteca é software livre; você pode redistribuí-la e/ou modificá-la }
+{ sob os termos da Licença Pública Geral Menor do GNU conforme publicada pela  }
+{ Free Software Foundation; tanto a versão 2.1 da Licença, ou (a seu critério) }
+{ qualquer versão posterior.                                                   }
+{                                                                              }
+{  Esta biblioteca é distribuída na expectativa de que seja útil, porém, SEM   }
+{ NENHUMA GARANTIA; nem mesmo a garantia implícita de COMERCIABILIDADE OU      }
+{ ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA. Consulte a Licença Pública Geral Menor}
+{ do GNU para mais detalhes. (Arquivo LICENÇA.TXT ou LICENSE.TXT)              }
+{                                                                              }
+{  Você deve ter recebido uma cópia da Licença Pública Geral Menor do GNU junto}
+{ com esta biblioteca; se não, escreva para a Free Software Foundation, Inc.,  }
+{ no endereço 59 Temple Street, Suite 330, Boston, MA 02111-1307 USA.          }
+{ Você também pode obter uma copia da licença em:                              }
+{ http://www.opensource.org/licenses/gpl-license.php                           }
+{                                                                              }
+{******************************************************************************}
+
+{******************************************************************************
+|* Historico
+|*
+|* xx/xx/xxxx:  Autor...
+|* - Descrição...
+******************************************************************************}
+
+{$I RLReport.inc}
+
 {@unit RLPrinters - Implementação do wrapper para o objeto Printer. }
+
 unit RLPrinters;
 
 interface
 
 uses
-  {$ifdef Windows}
-  Windows,
-    {$ifdef LCLWin32}
-    WinUtilPrn, OSPrinters,
-    {$endif}
-  {$endif}
-  {$ifndef LINUX}
-  Windows, WinSpool, Graphics, Dialogs, Messages, Printers,
-  {$else}
-  QGraphics, QDialogs, QPrinters, Types,
-  {$endif}
-  Classes, SysUtils, Math,
-  //Graphics, Dialogs, Messages, Printers,
+  {$IfDef MSWINDOWS}
+   Windows, WinSpool,
+   {$IfNDef FPC}
+    Messages,
+   {$EndIf}
+  {$EndIf}
+  Classes, SysUtils,
+  {$IfDef CLX}
+   QTypes, QGraphics, QDialogs, QPrinters,
+  {$Else}
+   Types, Graphics, Dialogs, Printers, Math,
+  {$EndIf}
+  {$IfDef FPC}
+   OSPrinters,
+   {$IfDef MSWINDOWS}WinUtilPrn,{$Else}process,{$EndIf}
+  {$EndIf}
   RLConsts, RLTypes, RLUtils;
 
 type
@@ -129,9 +181,15 @@ begin
   raise Exception.Create(AMessage);
 end;
 
-{$ifndef FPC}
 type
   TPrinterEx = class(TPrinter) end;
+
+{$IfDef FPC}
+procedure ReloadCurrentPrinter;
+begin
+  Printer.Refresh;
+end;
+{$Else}
 procedure ReloadCurrentPrinter;
 var
   Device, Driver, Port: array[0..MAX_PATH] of char;
@@ -213,7 +271,7 @@ begin
     Result := Printers.poLandscape;
 end;
 
-{$ifndef FPC}
+{$IfDef MSWINDOWS}
 procedure TRLPrinterWrapper.SelectSystemPaperSize(APaperSize: TRLSystemPaperType;
   APaperWidthMM, APaperHeightMM: Double; AOrientation: TRLSystemOrientation; ASetPaperBin: Boolean);
 var
@@ -224,6 +282,9 @@ var
   FDriver: PChar;
   FPort: PChar;
   FPrinterName: string;
+  {$IfDef FPC}
+  PDev: TPrinterDevice;
+  {$EndIf}
   function Able(Hability: Integer): Boolean;
   begin
     Result := (FCapabilities and Hability) > 0;
@@ -238,6 +299,7 @@ begin
       GetMem(FDevice, 255);
       GetMem(FDriver, 255);
       GetMem(FPort, 255);
+      {$IFNDEF FPC}
       Printer.GetPrinter(FDevice, FDriver, FPort, FDriverHandle);
       if FDriverHandle = 0 then
       begin
@@ -247,6 +309,12 @@ begin
       if FDriverHandle = 0 then
         Abort;
       FDeviceMode := GlobalLock(FDriverHandle);
+      {$ELSE}
+       PDev := TPrinterDevice(Printer.Printers.Objects[Printer.PrinterIndex]);
+       FDeviceMode := PDev.DevModeA;
+       if FDeviceMode = nil then
+         FDeviceMode := PDeviceModeA( PDev.DevModeW );  // Ugly
+      {$ENDIF}
       if FDeviceMode = nil then
         Abort;
       try
@@ -296,6 +364,28 @@ begin
   FPrinterName := PrinterName;
   PostMessage(HWND_BROADCAST, WM_DEVMODECHANGE, 0, Integer(@FPrinterName[1]));
 end;
+{$Else}
+procedure TRLPrinterWrapper.SelectSystemPaperSize(APaperSize: TRLSystemPaperType;
+  APaperWidthMM, APaperHeightMM: Double; AOrientation: TRLSystemOrientation; ASetPaperBin: Boolean);
+begin
+  //Printer.PrintAdapter.PageSize := APaperSize;
+  // adaptação de dimensões para o componente
+  // Na LCL não existe metodo portável para se definir o tamanho do papel personalizado
+  if APaperSize = UserPaperCode then
+  begin
+    {
+    if aPaperWidthMM<>0 then
+      Printer.PrintAdapter.PageWidth:=aPaperWidthMM;
+    if aPaperHeightMM<>0 then
+      Printer.PrintAdapter.PageHeight:=aPaperHeightMM;
+    }
+  end;
+  // orientação do papel
+  Printer.Orientation := ConvOrientation(AOrientation);
+end;
+{$EndIf}
+
+{$IfNDef FPC}
 procedure TRLPrinterWrapper.GetBinNames(AStringList: TStrings);
 type
   TBinName = array[0..23] of Char;
@@ -361,27 +451,11 @@ begin
         FreeMem(FPort, 255);
     end;
 end;
-{$else}
-procedure TRLPrinterWrapper.SelectSystemPaperSize(APaperSize: TRLSystemPaperType;
-  APaperWidthMM, APaperHeightMM: Double; AOrientation: TRLSystemOrientation; ASetPaperBin: Boolean);
-begin
-  //Printer.PrintAdapter.PageSize := APaperSize;
-  // adaptação de dimensões para o componente
-  // Na LCL não existe metodo portável para se definir o tamanho do papel personalizado
-  if APaperSize = UserPaperCode then
-  begin
-    {
-    if aPaperWidthMM<>0 then
-      Printer.PrintAdapter.PageWidth:=aPaperWidthMM;
-    if aPaperHeightMM<>0 then
-      Printer.PrintAdapter.PageHeight:=aPaperHeightMM;
-    }
-  end;
-  // orientação do papel
-  Printer.Orientation := ConvOrientation(AOrientation);
-end;
+
+{$Else}
 procedure TRLPrinterWrapper.GetBinNames(AStringList: TStrings);
 begin
+  AStringList.Assign( Printer.SupportedBins );
 end;
 {$endif}
 
@@ -409,6 +483,7 @@ begin
   try
     if not AnyPrinter then
       raise Exception.Create('Nenhuma impressora selecionada.');
+
 {$ifndef FPC}
     dc := Printer.Handle;
     if dc = 0 then
@@ -486,7 +561,7 @@ begin
   Result := Token(Printers[AIndex], 2);
 end;
 
-{$ifndef FPC}
+{$IfDef MSWINDOWS}
 type
   TPrinterInfo = record
     PrinterName: string;
@@ -499,21 +574,27 @@ function GetCurrentPrinterHandle: THandle;
 const
   Defaults: TPrinterDefaults = (pDatatype: nil; pDevMode: nil; DesiredAccess: PRINTER_ACCESS_USE);
 var
-  Device, Driver, Port: array[0..255] of char;
-  hDeviceMode: THandle;
   ok: Boolean;
+{$IfDef FPC}
+  PDev: TPrinterDevice;
+{$Else}
+  hDeviceMode: THandle;
+  Device, Driver, Port: array[0..255] of char;
+{$EndIf}
 begin
+{$IfDef FPC}
+  PDev := TPrinterDevice(Printer.Printers.Objects[Printer.PrinterIndex]);
+  ok := OpenPrinter(PChar(PDev.Name), @Result, @Defaults);
+{$Else}
   Printer.GetPrinter(Device, Driver, Port, hDeviceMode);
   ok := OpenPrinter(@Device, Result, @Defaults);
-{$ifdef DELPHI7}
-  if not ok then RaiseLastOSError;
-{$else}
-{$ifdef DELPHI6}
+{$EndIf}
+
+{$IfDef DELPHI6_DOWN}
   if not ok then RaiseLastWin32Error;
-{$else}
+{$Else}
   if not ok then RaiseLastOSError;
-{$endif}
-{$endif}
+{$EndIf}
 end;
 
 function GetCurrentPrinterInfo: TPrinterInfo;
@@ -529,7 +610,7 @@ begin
       bytesNeeded := 32768;
     pInfo := AllocMem(bytesNeeded);
     try
-      GetPrinter(hPrinter, 2, pInfo, bytesNeeded, @bytesNeeded);
+      GetPrinter(hPrinter, 2, {$IfDef FPC}@{$EndIf}pInfo, bytesNeeded, @bytesNeeded);
       Result.PrinterName := pInfo^.pPrinterName;
       Result.PrinterPort := pInfo^.pPortName;
       Result.ServerName := pInfo^.pServerName;
@@ -560,10 +641,10 @@ begin
 end;
 
 function TRLPrinterWrapper.GetPrinterPort: string;
-{$ifndef FPC}
+{$IfDef MSWINDOWS}
 var
   PInfo: TPrinterInfo;
-{$endif}
+{$EndIf}
 begin
   //todo: verify the best way to get the printer port in LCL
   if not AnyPrinter then
@@ -573,7 +654,8 @@ begin
   else
   begin
     Result := Token(Printers[PrinterIndex], 2);
-{$ifndef FPC}
+
+    {$IfDef MSWINDOWS}
     if Result = '?' then
     begin
       ReloadCurrentPrinter;
@@ -584,7 +666,7 @@ begin
         Result := PInfo.PrinterPort;
       Printers[PrinterIndex] := TokenListChanged(Printers[PrinterIndex], 2, Result);
     end;
-{$endif}
+    {$EndIf}
   end;  
 end;
 
@@ -626,12 +708,20 @@ begin
 end;
 
 procedure TRLPrinterWrapper.Refresh;
+{$IfNDef FPC}
+var
+  savedprinterindex: Integer;
+{$EndIf}
 begin
   FreeAndNil(FPrinters);
-  //todo: investigate why Delphi does not call Refresh
-{$ifdef FPC}
+{$IfDef FPC}
   Printer.Refresh;
-{$endif}
+{$Else}
+  savedprinterindex := Printer.PrinterIndex;
+  Printer.Refresh;
+  Printer.PrinterIndex := -1;
+  Printer.PrinterIndex := Min(savedprinterindex, Printer.Printers.Count - 1);
+{$EndIf}
 end;
 
 function TRLPrinterWrapper.GetCopies: Integer;
@@ -645,7 +735,7 @@ begin
 end;
 
 function TRLPrinterWrapper.SupportsDuplex: Boolean;
-{$ifndef FPC}
+{$IfNDef FPC}
 var
   Device, Driver, Port: array[0..255] of Char;
   DriverHandle: THandle;
@@ -653,35 +743,35 @@ begin
   Printer.GetPrinter(Device, Driver, Port, DriverHandle);
   Result := WinSpool.DeviceCapabilities(Device, Port, DC_DUPLEX, nil, nil) <> 0;
 end;
-{$else FPC}
-{$ifdef LCLWin32}
+{$Else FPC}
+{$IfDef MSWINDOWS}
 var
   PDev: TPrinterDevice;
 begin
   Result := Printer.PrinterIndex <> -1;
   if Result then
   begin
-    //todo: implement GetPrinterDevice
     PDev := TPrinterDevice(Printer.Printers.Objects[Printer.PrinterIndex]);
     Result := DeviceCapabilities(PChar(PDev.Device), PChar(PDev.Port), DC_DUPLEX, nil, nil) <> 0;
   end;
 end;
-{$else LCLWin32}
+{$Else MSWINDOWS}
 begin
   //note: Printer Duplex nor supported in non windows
   Result := False;
 end;
-{$endif LCLWin32}
-{$endif FPC}
+{$EndIf MSWINDOWS}
+{$EndIf FPC}
 
 function TRLPrinterWrapper.GetDuplex: Boolean;
-{$ifndef FPC}
+{$IfNDef FPC}
 var
   Device, Driver, Port: array[0..80] of Char;
   DriverHandle: THandle;
   DevModeRef: PDeviceMode;
 begin
   Result := False;
+
   Printer.GetPrinter(Device, Driver, Port, DriverHandle);
   if DriverHandle <> 0 then
   begin
@@ -694,15 +784,27 @@ begin
     end;
   end;
 end;
-{$else}
+{$Else FPC}
+{$IfDef MSWINDOWS}
+var
+  PDev: TPrinterDevice;
+  DevModeRef: PDeviceMode;
 begin
-  //todo: Implement TRLPrinterWrapper.GetDuplex
-  Result := True;
+  PDev := TPrinterDevice(Printer.Printers.Objects[Printer.PrinterIndex]);
+  DevModeRef := PDev.DevModeA;
+  if DevModeRef <> nil then
+    Result := DevModeRef^.dmDuplex <> DMDUP_SIMPLEX;
 end;
-{$endif}
+{$Else MSWINDOWS}
+begin
+  //note: Printer Duplex nor supported in non windows
+  Result := False;
+end;
+{$EndIf MSWINDOWS}
+{$EndIf FPC}
 
 procedure TRLPrinterWrapper.SetDuplex(const Value: Boolean);
-{$ifndef FPC}
+{$IfNDef FPC}
 var
   Device, Driver, Port: array[0..80] of Char;
   DriverHandle: THandle;
@@ -729,12 +831,35 @@ begin
     end;
   end;
 end;
-{$else}
+{$Else FPC}
+{$IfDef MSWINDOWS}
+var
+  PDev: TPrinterDevice;
+  DevModeRef: PDeviceMode;
 begin
-  //todo: Implement TRLPrinterWrapper.SetDuplex
-end;
-{$endif}
+  PDev := TPrinterDevice(Printer.Printers.Objects[Printer.PrinterIndex]);
+  DevModeRef := PDev.DevModeA;
 
+  if DevModeRef <> nil then
+  begin
+    if Value then
+    begin
+      DevModeRef^.dmDuplex := DMDUP_VERTICAL;
+      DevModeRef^.dmFields := DevModeRef^.dmFields or DM_DUPLEX;
+    end
+    else
+    begin
+      DevModeRef^.dmDuplex := DMDUP_SIMPLEX;
+      DevModeRef^.dmFields := DevModeRef^.dmFields and not DWORD(DM_DUPLEX);
+    end;
+  end;
+end;
+{$Else MSWINDOWS}
+begin
+  //note: Printer Duplex nor supported in non windows
+end;
+{$EndIf MSWINDOWS}
+{$EndIf FPC}
 
 function TRLPrinterWrapper.GetOddEven: TRLPrintOddEvenPages;
 begin
@@ -748,7 +873,7 @@ end;
 
 function TRLPrinterWrapper.SetupEnabled: Boolean;
 begin
-{$ifndef LINUX}
+{$ifdef MSWINDOWS}
   Result := True;
 {$else}
   Result := False;
@@ -836,7 +961,13 @@ begin
 end;
 {$else}
 begin
-  //todo: implement TRLPrinterWrapper.ExecuteSetup
+  Result := False;
+  {$IFDEF MSWINDOWS}
+    TWinPrinter(Printer).AdvancedProperties;
+    Result := True;
+  {$ELSE}
+    ShowMessage('Printer.AdvancedProperties is not yet implemented for this platform');
+  {$ENDIF}
 end;
 {$endif}
 
@@ -851,7 +982,7 @@ begin
     Result := PrinterNames[AIndex];
     Port := PrinterPorts[AIndex];
     if (Port <> Result) and (Port <> '?') then
-      Result := Result + ' ' + LocaleStrings.LS_AtStr + ' ' + Port;
+      Result := GetLocalizeStr(Result + ' ' + LocaleStrings.LS_AtStr + ' ' + Port);
   end;
 end;
 
